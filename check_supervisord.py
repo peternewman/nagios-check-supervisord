@@ -5,7 +5,7 @@
 # nagios-check-supervisord
 # check_supervisord.py
 
-# Copyright (c) 2015 Alexei Andrushievich <vint21h@vint21h.pp.ua>
+# Copyright (c) 2015-2016 Alexei Andrushievich <vint21h@vint21h.pp.ua>
 # Check supervisord programs status Nagios plugin [https://github.com/vint21h/nagios-check-supervisord]
 #
 # This file is part of nagios-check-supervisord.
@@ -30,14 +30,14 @@ try:
     from optparse import OptionParser
     import xmlrpclib
     from string import strip
-except (ImportError, ), error:
+except ImportError, error:
     sys.stderr.write("ERROR: Couldn't load module. {error}\n".format(error=error))
     sys.exit(-1)
 
 __all__ = ["main", ]
 
 # metadata
-VERSION = (0, 2, 7)
+VERSION = (0, 3, 1)
 __version__ = ".".join(map(str, VERSION))
 
 # global variables
@@ -60,6 +60,7 @@ OUTPUT_TEMPLATES = {
     },
 }
 STATE2TEMPLATE = {
+    "STOPPED": "ok",
     "RUNNING": "ok",
     "STARTING": "warning",
     "BACKOFF": "warning",
@@ -112,6 +113,7 @@ def parse_options():
     )
 
     options = parser.parse_args(sys.argv)[0]
+    STATE2TEMPLATE["STOPPED"] = options.stopped_state  # update stopped state value from command line argument
 
     # check mandatory command line options supplied
     if not options.server:
@@ -166,7 +168,7 @@ def create_output(data, options):
                 program: {
                     "name": program,
                     "template": STATE2TEMPLATE[program_data["statename"]],
-                    "status": (program_data["spawnerr"] if program_data["spawnerr"] else program_data["statename"]),
+                    "status": program_data["spawnerr"] if program_data["spawnerr"] else program_data["statename"],
                 }
             })
         except IndexError:
@@ -196,7 +198,6 @@ def main():
     """
 
     options = parse_options()
-    STATE2TEMPLATE["STOPPED"] = options.stopped_state
     output, code = create_output(get_status(options), options)
     sys.stdout.write(output)
     sys.exit(code)
